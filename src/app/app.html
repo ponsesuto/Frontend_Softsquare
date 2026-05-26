@@ -1,0 +1,145 @@
+<main class="shell">
+  <header class="topbar">
+    <div class="brand-block">
+      <div class="brand-mark">+</div>
+      <div>
+        <p class="eyebrow">Pharmacy Store</p>
+        <h1>Medicine Inventory</h1>
+        <p class="subtitle">Manage stock, prices, and pharmacist ownership in one place.</p>
+      </div>
+    </div>
+    <button type="button" class="ghost-button" (click)="loadAll()">Refresh</button>
+  </header>
+
+  <section class="summary-grid" *ngIf="summary">
+    <article class="summary-card total">
+      <div class="summary-icon">#</div>
+      <span>Total medicines</span>
+      <strong>{{ summary.totalItems }}</strong>
+    </article>
+    <article class="summary-card ready">
+      <div class="summary-icon">✓</div>
+      <span>Available</span>
+      <strong>{{ summary.available }}</strong>
+    </article>
+    <article class="summary-card warning">
+      <div class="summary-icon">!</div>
+      <span>Low stock</span>
+      <strong>{{ summary.lowStock }}</strong>
+    </article>
+    <article class="summary-card value">
+      <div class="summary-icon">฿</div>
+      <span>Inventory value</span>
+      <strong>{{ summary.inventoryValue | currency:'THB':'symbol-narrow' }}</strong>
+    </article>
+  </section>
+
+  <p class="error" *ngIf="error">{{ error }}</p>
+
+  <section class="workspace">
+    <form [formGroup]="form" (ngSubmit)="saveMedicine()" class="editor">
+      <div class="section-title">
+        <div>
+          <p class="panel-kicker">Inventory form</p>
+          <h2>{{ selected ? 'Edit medicine' : 'Add medicine' }}</h2>
+        </div>
+        <button type="button" class="ghost-button" (click)="resetForm()" *ngIf="selected">Cancel edit</button>
+      </div>
+
+      <label>
+        Name
+        <input formControlName="name" placeholder="Paracetamol 500mg">
+      </label>
+      <small *ngIf="form.controls.name.touched && form.controls.name.invalid">Name is required.</small>
+
+      <label>
+        Description
+        <textarea formControlName="description" rows="3" placeholder="Short medicine detail"></textarea>
+      </label>
+      <small *ngIf="form.controls.description.touched && form.controls.description.invalid">Description is required.</small>
+
+      <div class="field-row">
+        <label>
+          Status
+          <select formControlName="status">
+            <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+          </select>
+        </label>
+        <label>
+          Type
+          <select formControlName="type">
+            <option *ngFor="let type of types" [value]="type">{{ type }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="field-row">
+        <label>
+          Price
+          <input type="number" min="0" formControlName="price">
+        </label>
+        <label>
+          Quantity
+          <input type="number" min="0" formControlName="quantity">
+        </label>
+      </div>
+
+      <label>
+        Pharmacist
+        <select formControlName="relatedUserId">
+          <option *ngFor="let user of users" [ngValue]="user.id">{{ user.fullName }}</option>
+        </select>
+      </label>
+
+      <button class="primary-button" type="submit">{{ selected ? 'Update medicine' : 'Create medicine' }}</button>
+    </form>
+
+    <section class="list">
+      <div class="section-title">
+        <div>
+          <p class="panel-kicker">Catalog</p>
+          <h2>Medicines</h2>
+        </div>
+        <span class="record-count">{{ loading ? 'Loading...' : medicines.length + ' records' }}</span>
+      </div>
+
+      <article class="medicine-row" *ngFor="let medicine of medicines">
+        <div>
+          <div class="row-heading">
+            <div>
+              <h3>{{ medicine.name }}</h3>
+              <p>{{ medicine.description }}</p>
+            </div>
+            <span [class]="'status ' + medicine.status.toLowerCase().replaceAll(' ', '-')">{{ medicine.status }}</span>
+          </div>
+          <dl>
+            <div>
+              <dt>Type</dt>
+              <dd>{{ medicine.type }}</dd>
+            </div>
+            <div>
+              <dt>Pharmacist</dt>
+              <dd>{{ medicine.pharmacistName }}</dd>
+            </div>
+            <div>
+              <dt>Stock</dt>
+              <dd>{{ medicine.quantity }}</dd>
+            </div>
+            <div>
+              <dt>Price</dt>
+              <dd>{{ medicine.price | currency:'THB':'symbol-narrow' }}</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="row-actions">
+          <button type="button" class="ghost-button" (click)="editMedicine(medicine)">Edit</button>
+          <button type="button" class="danger-button" (click)="deleteMedicine(medicine)">Delete</button>
+        </div>
+      </article>
+
+      <div class="category-strip" *ngIf="summary?.byType?.length">
+        <span *ngFor="let category of summary?.byType">{{ category.type }}: {{ category.count }}</span>
+      </div>
+    </section>
+  </section>
+</main>
