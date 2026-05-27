@@ -1,145 +1,178 @@
 <main class="shell">
   <header class="topbar">
     <div class="brand-block">
-      <div class="brand-mark">+</div>
+      <div class="brand-mark">💊</div>
       <div>
-        <p class="eyebrow">Pharmacy Store</p>
-        <h1>Medicine Inventory</h1>
-        <p class="subtitle">Manage stock, prices, and pharmacist ownership in one place.</p>
+        <p class="eyebrow">Internal Management</p>
+        <h1>Pharmacy Store</h1>
+        <p class="subtitle">ระบบบริหารคลังยา ตรวจสอบสต็อก และราคาสินค้าคงคลัง</p>
       </div>
     </div>
-    <button type="button" class="ghost-button" (click)="loadAll()">Refresh</button>
+    <div class="topbar-actions">
+      <button type="button" class="btn btn-secondary" (click)="loadAll()">
+        🔄 Refresh Data
+      </button>
+      <button type="button" class="btn btn-primary" (click)="openAddMedicine()">
+        ➕ Add Medicine
+      </button>
+    </div>
   </header>
 
   <section class="summary-grid" *ngIf="summary">
     <article class="summary-card total">
-      <div class="summary-icon">#</div>
-      <span>Total medicines</span>
-      <strong>{{ summary.totalItems }}</strong>
+      <div class="card-meta"><span>Total Medicines</span><div class="card-icon">📦</div></div>
+      <strong>{{ summary.totalItems }} <small>รายการ</small></strong>
     </article>
     <article class="summary-card ready">
-      <div class="summary-icon">✓</div>
-      <span>Available</span>
-      <strong>{{ summary.available }}</strong>
+      <div class="card-meta"><span>Available</span><div class="card-icon text-success">🟢</div></div>
+      <strong>{{ summary.available }} <small>รายการ</small></strong>
     </article>
     <article class="summary-card warning">
-      <div class="summary-icon">!</div>
-      <span>Low stock</span>
-      <strong>{{ summary.lowStock }}</strong>
+      <div class="card-meta"><span>Low Stock</span><div class="card-icon text-warning">⚠️</div></div>
+      <strong>{{ summary.lowStock }} <small>รายการ</small></strong>
     </article>
     <article class="summary-card value">
-      <div class="summary-icon">฿</div>
-      <span>Inventory value</span>
+      <div class="card-meta"><span>Inventory Value</span><div class="card-icon text-primary">💰</div></div>
       <strong>{{ summary.inventoryValue | currency:'THB':'symbol-narrow' }}</strong>
     </article>
   </section>
 
-  <p class="error" *ngIf="error">{{ error }}</p>
+  <div class="error-banner" *ngIf="error">
+    <span class="error-icon">🛑</span>
+    <p class="error-text">{{ error }}</p>
+  </div>
 
-  <section class="workspace">
-    <form [formGroup]="form" (ngSubmit)="saveMedicine()" class="editor">
-      <div class="section-title">
-        <div>
-          <p class="panel-kicker">Inventory form</p>
-          <h2>{{ selected ? 'Edit medicine' : 'Add medicine' }}</h2>
-        </div>
-        <button type="button" class="ghost-button" (click)="resetForm()" *ngIf="selected">Cancel edit</button>
-      </div>
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" [(ngModel)]="searchQuery" placeholder="พิมพ์ค้นหาชื่อยา หรือรายละเอียด...">
+    </div>
+    <div class="filter-tags">
+      <span class="filter-label">กรองประเภท:</span>
+      <button type="button" 
+              *ngFor="let t of types" 
+              class="tag-btn" 
+              [class.active]="activeFilter === t"
+              (click)="toggleFilter(t)">
+        {{ t }}
+      </button>
+    </div>
+  </div>
 
-      <label>
-        Name
-        <input formControlName="name" placeholder="Paracetamol 500mg">
-      </label>
-      <small *ngIf="form.controls.name.touched && form.controls.name.invalid">Name is required.</small>
-
-      <label>
-        Description
-        <textarea formControlName="description" rows="3" placeholder="Short medicine detail"></textarea>
-      </label>
-      <small *ngIf="form.controls.description.touched && form.controls.description.invalid">Description is required.</small>
-
-      <div class="field-row">
-        <label>
-          Status
-          <select formControlName="status">
-            <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
-          </select>
-        </label>
-        <label>
-          Type
-          <select formControlName="type">
-            <option *ngFor="let type of types" [value]="type">{{ type }}</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="field-row">
-        <label>
-          Price
-          <input type="number" min="0" formControlName="price">
-        </label>
-        <label>
-          Quantity
-          <input type="number" min="0" formControlName="quantity">
-        </label>
-      </div>
-
-      <label>
-        Pharmacist
-        <select formControlName="relatedUserId">
-          <option *ngFor="let user of users" [ngValue]="user.id">{{ user.fullName }}</option>
-        </select>
-      </label>
-
-      <button class="primary-button" type="submit">{{ selected ? 'Update medicine' : 'Create medicine' }}</button>
-    </form>
-
-    <section class="list">
-      <div class="section-title">
-        <div>
-          <p class="panel-kicker">Catalog</p>
-          <h2>Medicines</h2>
-        </div>
-        <span class="record-count">{{ loading ? 'Loading...' : medicines.length + ' records' }}</span>
-      </div>
-
-      <article class="medicine-row" *ngFor="let medicine of medicines">
-        <div>
-          <div class="row-heading">
-            <div>
-              <h3>{{ medicine.name }}</h3>
-              <p>{{ medicine.description }}</p>
+  <section class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="sortable" (click)="sortBy('name')">
+            ชื่อยา / รายละเอียด 
+            <span class="sort-icon" *ngIf="sortColumn === 'name'">{{ sortAscending ? '▲' : '▼' }}</span>
+          </th>
+          <th class="sortable" (click)="sortBy('type')">
+            ประเภท 
+            <span class="sort-icon" *ngIf="sortColumn === 'type'">{{ sortAscending ? '▲' : '▼' }}</span>
+          </th>
+          <th class="sortable text-right" (click)="sortBy('quantity')">
+            สต็อกคงเหลือ 
+            <span class="sort-icon" *ngIf="sortColumn === 'quantity'">{{ sortAscending ? '▲' : '▼' }}</span>
+          </th>
+          <th class="sortable text-right" (click)="sortBy('price')">
+            ราคา 
+            <span class="sort-icon" *ngIf="sortColumn === 'price'">{{ sortAscending ? '▲' : '▼' }}</span>
+          </th>
+          <th>เภสัชกรผู้ดูแล</th>
+          <th class="text-center sortable" (click)="sortBy('status')">
+            สถานะ 
+            <span class="sort-icon" *ngIf="sortColumn === 'status'">{{ sortAscending ? '▲' : '▼' }}</span>
+          </th>
+          <th class="text-center">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let medicine of displayedMedicines" class="med-row">
+          <td>
+            <div class="med-identity">
+              <span class="med-name">{{ medicine.name }}</span>
+              <span class="med-desc">{{ medicine.description }}</span>
             </div>
-            <span [class]="'status ' + medicine.status.toLowerCase().replaceAll(' ', '-')">{{ medicine.status }}</span>
-          </div>
-          <dl>
-            <div>
-              <dt>Type</dt>
-              <dd>{{ medicine.type }}</dd>
+          </td>
+          <td><span class="type-tag">{{ medicine.type }}</span></td>
+          <td class="text-right font-mono" [class.text-danger]="medicine.quantity < 10">
+            <strong>{{ medicine.quantity }}</strong> ชิ้น
+          </td>
+          <td class="text-right font-mono font-bold">
+            {{ medicine.price | currency:'THB':'symbol-narrow' }}
+          </td>
+          <td><div class="pharmacist-info"><span class="ph-name">{{ medicine.pharmacistName }}</span></div></td>
+          <td class="text-center">
+            <span [class]="'badge badge-' + medicine.status.toLowerCase().replaceAll(' ', '-')">
+              {{ medicine.status }}
+            </span>
+          </td>
+          <td class="text-center">
+            <div class="action-buttons">
+              <button type="button" class="btn-icon-action btn-edit" title="แก้ไข" (click)="editMedicine(medicine)">📝</button>
+              <button type="button" class="btn-icon-action btn-delete" title="ลบ" (click)="deleteMedicine(medicine)">🗑️</button>
             </div>
-            <div>
-              <dt>Pharmacist</dt>
-              <dd>{{ medicine.pharmacistName }}</dd>
-            </div>
-            <div>
-              <dt>Stock</dt>
-              <dd>{{ medicine.quantity }}</dd>
-            </div>
-            <div>
-              <dt>Price</dt>
-              <dd>{{ medicine.price | currency:'THB':'symbol-narrow' }}</dd>
-            </div>
-          </dl>
-        </div>
-        <div class="row-actions">
-          <button type="button" class="ghost-button" (click)="editMedicine(medicine)">Edit</button>
-          <button type="button" class="danger-button" (click)="deleteMedicine(medicine)">Delete</button>
-        </div>
-      </article>
-
-      <div class="category-strip" *ngIf="summary?.byType?.length">
-        <span *ngFor="let category of summary?.byType">{{ category.type }}: {{ category.count }}</span>
-      </div>
-    </section>
+          </td>
+        </tr>
+        <tr *ngIf="displayedMedicines.length === 0">
+          <td colspan="7" class="text-center empty-state">📭 ไม่พบรายการยาที่ค้นหา</td>
+        </tr>
+      </tbody>
+    </table>
   </section>
+
+  <div class="drawer-backdrop" *ngIf="showForm" (click)="closeForm()"></div>
+  <div class="drawer" [class.open]="showForm">
+    <div class="drawer-header">
+      <h2>{{ selected ? '📝 แก้ไขข้อมูลยา' : '➕ เพิ่มรายการยาใหม่' }}</h2>
+      <button type="button" class="close-drawer" (click)="closeForm()">×</button>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="drawer-body">
+      <div class="form-group">
+        <label>ชื่อสามัญทางยา (Medicine Name) <span class="required">*</span></label>
+        <input type="text" formControlName="name" [class.is-invalid]="form.get('name')?.invalid && form.get('name')?.touched">
+      </div>
+      <div class="form-group">
+        <label>รายละเอียด / สรรพคุณ (Description) <span class="required">*</span></label>
+        <textarea formControlName="description" rows="3" [class.is-invalid]="form.get('description')?.invalid && form.get('description')?.touched"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>หมวดหมู่ยา (Type)</label>
+          <select formControlName="type">
+            <option *ngFor="let t of types" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>สถานะคลัง (Status)</label>
+          <select formControlName="status">
+            <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>ราคาสินค้า (Price ฿) <span class="required">*</span></label>
+          <input type="number" formControlName="price" min="0" step="0.01" [class.is-invalid]="form.get('price')?.invalid && form.get('price')?.touched">
+        </div>
+        <div class="form-group">
+          <label>จำนวนในสต็อก (Stock) <span class="required">*</span></label>
+          <input type="number" formControlName="quantity" min="0" [class.is-invalid]="form.get('quantity')?.invalid && form.get('quantity')?.touched">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>เภสัชกรผู้รับผิดชอบ</label>
+        <select formControlName="relatedUserId">
+          <option *ngFor="let u of users" [value]="u.id">{{ u.fullName }}</option>
+        </select>
+      </div>
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeForm()">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary" [disabled]="loading">
+          {{ loading ? '⏳ กำลังบันทึก...' : (selected ? '💾 บันทึกการแก้ไข' : '🚀 เพิ่มลงคลัง') }}
+        </button>
+      </div>
+    </form>
+  </div>
 </main>
